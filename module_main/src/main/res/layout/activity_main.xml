@@ -15,18 +15,27 @@
         android:id="@+id/news_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="News" />
+        android:text="News"
+        android:visibility="invisible" />
 
     <Button
         android:id="@+id/girls_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Girls" />
+        android:text="Girls"
+        android:visibility="invisible" />
 
     <Button
         android:id="@+id/fragment_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Fragment" />
+        android:text="Fragment"
+        android:visibility="invisible" />
+
+    <Button
+        android:id="@+id/ble_receiver_btn"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:text="蓝牙广播收集" />
 
 </LinearLayout>
