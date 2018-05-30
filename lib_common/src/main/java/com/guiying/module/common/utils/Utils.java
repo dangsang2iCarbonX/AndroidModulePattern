@@ -113,4 +113,18 @@ public class Utils {
         return obj;
     }
 
+    public static String byteArray2String(byte[] data){
+        if (data==null)return "";
+
+        final char[] HEX_CHAR = {'0', '1', '2', '3', '4', '5', '6', '7', '8',
+                '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+        StringBuilder stringBuilder = new StringBuilder();
+        for(int i=0; i<data.length; i++){
+            stringBuilder.append(HEX_CHAR[(data[i] & 0xf0) >>> 4]);
+            stringBuilder.append(HEX_CHAR[(data[i] & 0x0f)]);
+            if(i < data.length-1)
+                stringBuilder.append(" ");
+        }
+        return stringBuilder.toString();
+    }
 }
