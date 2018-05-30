@@ -30,6 +30,10 @@ android {
 
 dependencies {
     api fileTree(include: ['*.jar'], dir: 'libs')
+    //ble scanner
+    api deps.nordic.scanner
+    //api 'no.nordicsemi.android.support.v18:scanner:1.1.0'
+
     // Support libraries
     api deps.support.app_compat
     api deps.support.v4
@@ -38,6 +42,7 @@ dependencies {
     api deps.support.cardview
     api deps.support.percent
     api deps.support.recyclerview
+    api deps.support.core_ui
     api deps.constraint_layout
 
     // RxJava and retrofit
