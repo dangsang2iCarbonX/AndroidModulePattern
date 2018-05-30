@@ -12,9 +12,9 @@ android {
         targetSdkVersion build_versions.target_sdk
         versionCode 1
         versionName "1.0"
-
-        applicationId "com.demo.icarbox.blereceiver"
-
+        if (isModule.toBoolean()) {
+            applicationId "com.demo.icarbox.blereceiver"
+        }
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = [ moduleName : project.getName() ]
