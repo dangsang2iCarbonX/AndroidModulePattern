@@ -1,0 +1,133 @@
+package com.demo.icarbox.blereceiver;
+
+import android.app.IntentService;
+import android.content.Intent;
+import android.support.annotation.Nullable;
+import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import no.nordicsemi.android.support.v18.scanner.BluetoothLeScannerCompat;
+import no.nordicsemi.android.support.v18.scanner.ScanCallback;
+import no.nordicsemi.android.support.v18.scanner.ScanFilter;
+import no.nordicsemi.android.support.v18.scanner.ScanResult;
+import no.nordicsemi.android.support.v18.scanner.ScanSettings;
+
+/**
+ * Use original class name as key and class object as value.
+ * Send data though localBroadcastManager
+ */
+public class ScannerIntentService extends IntentService {
+    private final static String TAG = ScannerIntentService.class.getName();
+    public static final String STATUS_I = TAG + "status";
+    public static final String CONTROL_I = TAG + "control";
+    public static final String ACTION = TAG + "broadcast_action";
+
+    //Manager to send data
+    private LocalBroadcastManager mLocalBroadcastManager;
+    private boolean isScanning = false;
+
+    public ScannerIntentService() {
+        this(ScannerIntentService.class.getSimpleName());
+    }
+
+    /**
+     * Creates an IntentService.  Invoked by your subclass's constructor.
+     *
+     * @param name Used to name the worker thread, important only for debugging.
+     */
+    public ScannerIntentService(String name) {
+        super(name);
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        mLocalBroadcastManager = LocalBroadcastManager.getInstance(getApplicationContext());
+        Log.e(TAG, "onCreate");
+    }
+
+    @Override
+    public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
+        if (intent == null) super.onStartCommand(intent, flags, startId);
+        int controlCode = intent.getIntExtra(CONTROL_I, -1);
+        Log.e(TAG, "onStartCommand "+controlCode);
+        if (controlCode == -1){
+            if(isScanning){
+                Log.e(TAG, "onStartCommand stop scan"+controlCode);
+                BluetoothLeScannerCompat.getScanner().stopScan(scanCallback);
+                isScanning = false;
+            }
+            stopSelf(startId);
+        }
+
+        return super.onStartCommand(intent, flags, startId);
+    }
+
+    @Override
+    protected void onHandleIntent(@Nullable Intent intent) {
+        if (intent == null) return;
+        int controlCode = intent.getIntExtra(CONTROL_I, -1);
+        if (controlCode < 0) return;
+        Log.e(TAG, "onHandleIntent "+controlCode);
+
+        if (controlCode == 1) {
+            ArrayList<ScanFilter> filters = intent.getParcelableArrayListExtra(ScanFilter.class.getName());
+            ScanSettings scanSettings = intent.getParcelableExtra(ScanSettings.class.getName());
+
+            if (scanSettings == null) {
+                scanSettings = new ScanSettings.Builder()
+                        .setLegacy(false)
+                        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).setReportDelay(0)
+                        .setUseHardwareBatchingIfSupported(false).build();
+            }
+            Log.e(TAG, "onHandleIntent: "+controlCode);
+            isScanning = true;
+            BluetoothLeScannerCompat scanner = BluetoothLeScannerCompat.getScanner();
+            scanner.startScan(filters, scanSettings, scanCallback);
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        Log.e(TAG, "onDestroy");
+    }
+
+    private final ScanCallback scanCallback = new ScanCallback() {
+        @Override
+        public void onScanResult(int callbackType, ScanResult result) {
+            Log.e(TAG, result.getDevice().getAddress()+"="+result.getDevice().getName());
+
+            mLocalBroadcastManager.sendBroadcast(new Intent()
+                    .setAction(ACTION)
+                    .putExtra(ScanResult.class.getName(), result)
+                    .putExtra(STATUS_I, 1)
+            );
+
+        }
+
+        @Override
+        public void onBatchScanResults(List<ScanResult> results) {
+            Log.e(TAG, "onBatchScanResults");
+            mLocalBroadcastManager.sendBroadcast(new Intent()
+                    .setAction(ACTION)
+                    .putParcelableArrayListExtra(ScanResult.class.getName(), new ArrayList<ScanResult>(results))
+                    .putExtra(STATUS_I, 2)
+            );
+
+        }
+
+        @Override
+        public void onScanFailed(int errorCode) {
+            Log.e(TAG, "onScanFailed: "+errorCode);
+            mLocalBroadcastManager.sendBroadcast(new Intent()
+                    .setAction(ACTION)
+                    .putExtra(STATUS_I, -1)
+            );
+        }
+    };
+}

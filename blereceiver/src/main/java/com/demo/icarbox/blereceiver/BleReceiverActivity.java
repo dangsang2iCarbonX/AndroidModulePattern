@@ -1,28 +1,52 @@
 package com.demo.icarbox.blereceiver;
 
+import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.ParcelUuid;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.alibaba.android.arouter.facade.annotation.Route;
+import com.guiying.module.common.base.BaseActionBarActivity;
+import com.guiying.module.common.base.BaseApplication;
 import com.guiying.module.common.utils.Utils;
 import com.jude.easyrecyclerview.EasyRecyclerView;
 import com.jude.easyrecyclerview.adapter.BaseViewHolder;
 import com.jude.easyrecyclerview.adapter.RecyclerArrayAdapter;
+import com.marshalchen.ultimaterecyclerview.UltimateRecyclerView;
+import com.marshalchen.ultimaterecyclerview.UltimateViewAdapter;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import no.nordicsemi.android.support.v18.scanner.ScanFilter;
+import no.nordicsemi.android.support.v18.scanner.ScanResult;
+import no.nordicsemi.android.support.v18.scanner.ScanSettings;
 
 @Route(path = "/ble/receiver")
-public class BleReceiverActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener {
+public class BleReceiverActivity extends BaseActionBarActivity implements SwipeRefreshLayout.OnRefreshListener, View.OnClickListener {
 
     private EasyRecyclerView mEasyRecyclerView;
     private DeviceAdaper mDeviceAdaper;
     private Handler handler;
+
+    @Override
+    protected int setTitleId() {
+        return R.string.str_ble_receiver_title;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,7 +61,69 @@ public class BleReceiverActivity extends AppCompatActivity implements SwipeRefre
         mEasyRecyclerView.setAdapter(mDeviceAdaper);
 
         handler = new Handler(Looper.myLooper());
+
+        findViewById(R.id.serviceStart).setOnClickListener(this);
+        findViewById(R.id.serviceStop).setOnClickListener(this);
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(ScannerService.ACTION);
+
+        LocalBroadcastManager.getInstance(getApplicationContext())
+                .registerReceiver(broadcastReceiver, intentFilter);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        LocalBroadcastManager.getInstance(getApplicationContext())
+                .unregisterReceiver(broadcastReceiver);
+    }
+
+//    ScanBroadcastReceiver scanBroadcastReceiver = new ScanBroadcastReceiver();
+
+    BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            //Log.e("receiver broad",context.getPackageName());
+            if (intent.getAction().equals(ScannerService.ACTION)) {
+                if (intent.getIntExtra(ScannerService.STATUS_I, -1) == ScannerService.STATUS.SINGLE) {
+                    mDeviceAdaper.addDataByScanResult(intent.getParcelableExtra(ScanResult.class.getName()));
+                } else if (intent.getIntExtra(ScannerService.STATUS_I, -1) == ScannerService.STATUS.BATCH) {
+                    mDeviceAdaper.addDataByScanResults(intent.getParcelableArrayListExtra(ScanResult.class.getName()));
+                } else {//scan failed
+
+                }
+
+            }
+        }
+    };
+
+    @Override
+    public void onClick(View v) {
+        if (v.getId() == R.id.serviceStart) {
+            Intent intent = new Intent(this, ScannerService.class);
+            intent.putExtra(ScannerService.CONTROL_I, 1);
+            ArrayList<ScanFilter> scanFilters = new ArrayList<>();
+            scanFilters.add(new ScanFilter.Builder().setDeviceName("bong4").build());
+            intent.putParcelableArrayListExtra(ScanFilter.class.getName(),scanFilters);
+
+            startService(intent);
+        } else if (v.getId() == R.id.serviceStop) {
+            Intent intent = new Intent(this, ScannerService.class);
+            intent.putExtra(ScannerService.CONTROL_I, -1);
+            stopService(intent);
+        }
+    }
+
+//    private class ScanBroadcastReceiver extends BroadcastReceiver {
+//
+//
+//    }
 
     @Override
     public void onRefresh() {
@@ -60,6 +146,38 @@ public class BleReceiverActivity extends AppCompatActivity implements SwipeRefre
 
         public DeviceAdaper(Context context) {
             super(context);
+        }
+
+        /**
+         * Add by one scanresult
+         *
+         * @param scanResult
+         */
+        public void addDataByScanResult(ScanResult scanResult) {
+            BleDevice bleDevice = new BleDevice()
+                    .Rssi(scanResult.getRssi())
+                    .Mac(scanResult.getDevice().getAddress())
+                    .Name(scanResult.getDevice().getName())
+                    .ScanData(scanResult.getScanRecord().getBytes());
+
+            int ind = mObjects.indexOf(bleDevice);
+            if (ind > 0) {
+                update(bleDevice, ind);
+            } else {
+                if(getCount()<20)add(bleDevice);
+            }
+        }
+
+        /**
+         * Add by scanresult set
+         *
+         * @param list
+         */
+        public void addDataByScanResults(List<ScanResult> list) {
+            Iterator<ScanResult> iterator = list.iterator();
+            while (iterator.hasNext()) {
+                addDataByScanResult(iterator.next());
+            }
         }
 
         @Override

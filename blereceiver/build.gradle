@@ -53,4 +53,5 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     annotationProcessor deps.arouter_compiler
     implementation project(':lib_common')
+    api 'com.marshalchen.ultimaterecyclerview:library:0.7.3'
 }

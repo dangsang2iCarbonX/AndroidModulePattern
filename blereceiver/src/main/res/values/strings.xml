@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">BleReceiver</string>
+    <string name="str_ble_receiver_title">蓝牙数据收集</string>
+
 </resources>
