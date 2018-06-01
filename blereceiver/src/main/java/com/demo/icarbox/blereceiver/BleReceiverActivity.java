@@ -1,18 +1,15 @@
 package com.demo.icarbox.blereceiver;
 
-import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.ParcelUuid;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,13 +17,11 @@ import android.widget.TextView;
 
 import com.alibaba.android.arouter.facade.annotation.Route;
 import com.guiying.module.common.base.BaseActionBarActivity;
-import com.guiying.module.common.base.BaseApplication;
 import com.guiying.module.common.utils.Utils;
+import com.icarbonx.smartdevice.manager.ble.BleDevice;
 import com.jude.easyrecyclerview.EasyRecyclerView;
 import com.jude.easyrecyclerview.adapter.BaseViewHolder;
 import com.jude.easyrecyclerview.adapter.RecyclerArrayAdapter;
-import com.marshalchen.ultimaterecyclerview.UltimateRecyclerView;
-import com.marshalchen.ultimaterecyclerview.UltimateViewAdapter;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -34,7 +29,6 @@ import java.util.List;
 
 import no.nordicsemi.android.support.v18.scanner.ScanFilter;
 import no.nordicsemi.android.support.v18.scanner.ScanResult;
-import no.nordicsemi.android.support.v18.scanner.ScanSettings;
 
 @Route(path = "/ble/receiver")
 public class BleReceiverActivity extends BaseActionBarActivity implements SwipeRefreshLayout.OnRefreshListener, View.OnClickListener {
@@ -120,19 +114,14 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
         }
     }
 
-//    private class ScanBroadcastReceiver extends BroadcastReceiver {
-//
-//
-//    }
-
     @Override
     public void onRefresh() {
         Log.e("receiver", "add one deive");
         mDeviceAdaper.add(new BleDevice()
-                .Rssi((int) (1 + Math.random() * (10 - 1 + 1)))
-                .Mac("DS")
-                .Name("iCarbonX")
-                .ScanData("scan data a lot data".getBytes())
+                .addRssi((int) (1 + Math.random() * (10 - 1 + 1)))
+                .addMac("DS")
+                .addName("iCarbonX")
+                .addScanData("scan data a lot data".getBytes())
         );
         handler.postDelayed(new Runnable() {
             @Override
@@ -155,10 +144,10 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
          */
         public void addDataByScanResult(ScanResult scanResult) {
             BleDevice bleDevice = new BleDevice()
-                    .Rssi(scanResult.getRssi())
-                    .Mac(scanResult.getDevice().getAddress())
-                    .Name(scanResult.getDevice().getName())
-                    .ScanData(scanResult.getScanRecord().getBytes());
+                    .addRssi(scanResult.getRssi())
+                    .addMac(scanResult.getDevice().getAddress())
+                    .addName(scanResult.getDevice().getName())
+                    .addScanData(scanResult.getScanRecord().getBytes());
 
             int ind = mObjects.indexOf(bleDevice);
             if (ind > 0) {

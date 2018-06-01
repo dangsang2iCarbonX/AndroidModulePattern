@@ -1,4 +1,4 @@
-package com.demo.icarbox.blereceiver;
+package com.icarbonx.smartdevice.manager.ble;
 
 import android.Manifest;
 import android.app.Activity;
@@ -12,8 +12,6 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.widget.Toast;
 
-import com.guiying.module.common.base.ViewManager;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,41 +22,39 @@ import no.nordicsemi.android.support.v18.scanner.ScanResult;
 import no.nordicsemi.android.support.v18.scanner.ScanSettings;
 
 /**
- * Manage ble open/close and ble device scan and fileter
+ * Manage ble scan start/stop and filter devices while scanning
  *
  * @author lavi
  */
-public class BleManager {
-    private static BleManager bleManager;
+public class BleScanManager {
+    private static BleScanManager bleManager;
 
     //Permission request code
     public static final int REQUEST_PERMISSION_BLE = 0x20;
-    //    //Context
-//    private Context context;
     //Scan callback
-    private IBleScanResult iBleScanResult ;
+    private IBleScanResult mIBleScanResult ;
     //Filters used for scanning
-    private List<ScanFilter> filters = new ArrayList<>();
+    private List<ScanFilter> mFilters = new ArrayList<>();
     //Settings used for scanning
-    private ScanSettings scanSettings;
-    private int filterRssi = -200;
+    private ScanSettings mScanSettings;
+    private int mFilterRssi = -200;
 
     /**
      * Scan result interface
      */
     public interface IBleScanResult{
-        void onResult(ScanResult scanResult);
+        void onResult(BleScanDevice bleScanDevice);
     }
 
     /**
-     * Instance of BleManager
+     * Instance of BleScanManager
      *
      * @param context Context
-     * @return BleManager object
+     * @return BleScanManager object
      */
-    public static BleManager getInstance(Context context) {
+    public static BleScanManager getInstance(Context context) {
         if (bleManager == null) {
-            bleManager = new BleManager();
+            bleManager = new BleScanManager();
             checkPermissions(context);
             checkBleOn(context);
         }
@@ -68,8 +64,8 @@ public class BleManager {
     /**
      * Constructor
      */
-    protected BleManager() {
-        scanSettings = new ScanSettings.Builder()
+    protected BleScanManager() {
+        mScanSettings = new ScanSettings.Builder()
                 .setLegacy(false)
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).setReportDelay(0)
                 .setUseHardwareBatchingIfSupported(false).build();
@@ -141,7 +137,7 @@ public class BleManager {
      * @param iBleScanResult IBleScanResult
      */
     public void setScanResultInterface(IBleScanResult iBleScanResult) {
-        this.iBleScanResult = iBleScanResult;
+        this.mIBleScanResult = iBleScanResult;
     }
 
     /**
@@ -149,7 +145,7 @@ public class BleManager {
      */
     public void startScan() {
         BluetoothLeScannerCompat scanner = BluetoothLeScannerCompat.getScanner();
-        scanner.startScan(filters, scanSettings, scanCallback);
+        scanner.startScan(mFilters, mScanSettings, scanCallback);
     }
 
     /**
@@ -164,8 +160,8 @@ public class BleManager {
      * Release resources
      */
     public void reset() {
-        filters.clear();
-        scanSettings = new ScanSettings.Builder()
+        mFilters.clear();
+        mScanSettings = new ScanSettings.Builder()
                 .setLegacy(false)
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).setReportDelay(0)
                 .setUseHardwareBatchingIfSupported(false).build();
@@ -176,7 +172,7 @@ public class BleManager {
      * @param name device name
      */
     public void filterByName(String name) {
-        filters.add(new ScanFilter.Builder().setDeviceName(name).build());
+        mFilters.add(new ScanFilter.Builder().setDeviceName(name).build());
     }
 
     /**
@@ -184,20 +180,21 @@ public class BleManager {
      * @param mac device name
      */
     public void filterByMac(String mac) {
-        filters.add(new ScanFilter.Builder().setDeviceAddress(mac).build());
+        mFilters.add(new ScanFilter.Builder().setDeviceAddress(mac).build());
     }
 
     public void filterByRssi(int rssi){
-        this.filterRssi = rssi;
+        this.mFilterRssi = rssi;
     }
 
     private ScanCallback scanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
-            if (result.getRssi()<filterRssi){
+            if (result.getRssi()<mFilterRssi){
                 return;
             }
-            iBleScanResult.onResult(result);
+            //callback result
+            mIBleScanResult.onResult(new BleScanDevice.Builder().fromResult(result).build());
         }
 
         @Override

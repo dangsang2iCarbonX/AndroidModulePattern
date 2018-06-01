@@ -1,12 +1,13 @@
 package com.demo.icarbox.blereceiver;
 
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+
+import com.icarbonx.smartdevice.manager.ble.BleScanManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,7 +52,7 @@ public class ScannerService extends Service {
         super.onCreate();
 
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(getApplicationContext());
-        BleManager.getInstance(getApplicationContext());
+        BleScanManager.getInstance(getApplicationContext());
 
         Log.e(TAG, "onCreate");
     }
