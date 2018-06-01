@@ -7,12 +7,12 @@ import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
-import com.icarbonx.smartdevice.manager.ble.BleScanManager;
+import com.icarbonx.smartdevice.ble.manager.BleScanDevice;
+import com.icarbonx.smartdevice.ble.manager.BleScanManager;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import no.nordicsemi.android.support.v18.scanner.BluetoothLeScannerCompat;
 import no.nordicsemi.android.support.v18.scanner.ScanCallback;
 import no.nordicsemi.android.support.v18.scanner.ScanFilter;
 import no.nordicsemi.android.support.v18.scanner.ScanResult;
@@ -38,7 +38,7 @@ public class ScannerService extends Service {
     public static class STATUS{
         public final static int SINGLE = 1;
         public final static int BATCH = 2;
-        public final static int ERROR = -1;
+        public final static int FAILURE = -1;
     }
 
     @Nullable
@@ -73,8 +73,9 @@ public class ScannerService extends Service {
         if (controlCode == -1) {
             if (isScanning) {
                 Log.e(TAG, "onStartCommand stop scan" + controlCode);
-                BluetoothLeScannerCompat.getScanner().stopScan(scanCallback);
+//                BluetoothLeScannerCompat.getScanner().stopScan(scanCallback);
                 isScanning = false;
+                BleScanManager.getInstance(this).stopScan();
             }
             stopSelf(startId);
             return super.onStartCommand(intent, flags, startId);
@@ -91,8 +92,11 @@ public class ScannerService extends Service {
             }
             Log.e(TAG, "onStartCommand: startScan");
             isScanning = true;
-            BluetoothLeScannerCompat scanner = BluetoothLeScannerCompat.getScanner();
-            scanner.startScan(filters, scanSettings, scanCallback);
+//            BluetoothLeScannerCompat scanner = BluetoothLeScannerCompat.getScanner();
+//            scanner.startScan(filters, scanSettings, scanCallback);
+            BleScanManager.getInstance(this).setIBleScanResult(mIBleScanResult);
+            //BleScanManager.getInstance(this).filterByRssi(-60);
+            BleScanManager.getInstance(this).startScan();
         }
         return super.onStartCommand(intent, flags, startId);
     }
@@ -102,11 +106,31 @@ public class ScannerService extends Service {
         super.onDestroy();
 
         if(isScanning){
-            BluetoothLeScannerCompat.getScanner().stopScan(scanCallback);
+//            BluetoothLeScannerCompat.getScanner().stopScan(scanCallback);
+            BleScanManager.getInstance(this).stopScan();
         }
 //        mLocalBroadcastManager = null;
         Log.e(TAG, "onDestroy");
     }
+
+    private final BleScanManager.IBleScanResult mIBleScanResult = new BleScanManager.IBleScanResult() {
+        @Override
+        public void onResult(BleScanDevice bleScanDevice) {
+            mLocalBroadcastManager.sendBroadcast(new Intent()
+                    .setAction(ACTION)
+                    .putExtra(BleScanDevice.class.getName(), bleScanDevice)
+                    .putExtra(STATUS_I,STATUS.SINGLE)
+            );
+        }
+
+        @Override
+        public void onFail() {
+            mLocalBroadcastManager.sendBroadcast(new Intent()
+                    .setAction(ACTION)
+                    .putExtra(STATUS_I, STATUS.FAILURE)
+            );
+        }
+    };
 
     private final ScanCallback scanCallback = new ScanCallback() {
         @Override
@@ -137,7 +161,7 @@ public class ScannerService extends Service {
             Log.e(TAG, "onScanFailed: "+errorCode);
             mLocalBroadcastManager.sendBroadcast(new Intent()
                     .setAction(ACTION)
-                    .putExtra(STATUS_I, -STATUS.ERROR)
+                    .putExtra(STATUS_I, STATUS.FAILURE)
             );
         }
     };

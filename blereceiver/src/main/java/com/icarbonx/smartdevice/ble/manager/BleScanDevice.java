@@ -1,15 +1,15 @@
-package com.icarbonx.smartdevice.manager.ble;
+package com.icarbonx.smartdevice.ble.manager;
 
+import android.os.Parcel;
 import android.os.ParcelUuid;
+import android.os.Parcelable;
 
-import no.nordicsemi.android.support.v18.scanner.ScanRecord;
 import no.nordicsemi.android.support.v18.scanner.ScanResult;
-import no.nordicsemi.android.support.v18.scanner.ScanSettings;
 
 /**
- * Bluetooth device class
+ * Bluetooth device class from {@link ScanResult}
  */
-public class BleScanDevice {
+public class BleScanDevice implements Parcelable{
     //Device from scan result
     private ScanResult mScanResult;
 
@@ -21,8 +21,11 @@ public class BleScanDevice {
      * Get scanned device's name
      *
      * @return Device's name
+     * @throws NullPointerException If {@code ScanResult} is null of the method{@link Builder#fromResult(ScanResult)}.
      */
-    public String getName() {
+    public String getName() throws NullPointerException{
+        if (mScanResult==null)throw new NullPointerException("You should build from a not null ScanResult object");
+
         //Priority get device name
         if (mScanResult.getDevice().getName() != null) {
             return mScanResult.getDevice().getName();
@@ -32,7 +35,7 @@ public class BleScanDevice {
             return mScanResult.getScanRecord().getDeviceName();
         }
         //Got no device name return specified String as name
-        return String.format("iCarbonX-%00004d", (int) (Math.random() * 1000 + 1));
+        return String.format("iCarbonX-200");
     }
 
     /**
@@ -40,7 +43,8 @@ public class BleScanDevice {
      *
      * @return Device's MAC
      */
-    public String getMac() {
+    public String getMac(){
+
         return mScanResult.getDevice().getAddress();
     }
 
@@ -50,6 +54,7 @@ public class BleScanDevice {
      * @return Device's RSSI when scanned
      */
     public int getRssi() {
+
         return mScanResult.getRssi();
     }
 
@@ -59,6 +64,7 @@ public class BleScanDevice {
      * @return Returns raw bytes of scan record.
      */
     public byte[] getScanRawData() {
+
         return mScanResult.getScanRecord().getBytes();
     }
 
@@ -68,7 +74,8 @@ public class BleScanDevice {
      * @return Returns the service data byte array associated with the {@code serviceUuid}. Returns
      * {@code null} if the {@code serviceDataUuid} is not found.
      */
-    public byte[] getScanDataByService(ParcelUuid serviceDataUuid) {
+    public byte[] getScanDataByService(ParcelUuid serviceDataUuid){
+
         if (serviceDataUuid == null) return null;
         return mScanResult.getScanRecord().getServiceData(serviceDataUuid);
     }
@@ -86,6 +93,51 @@ public class BleScanDevice {
         }
         return false;
     }
+
+    @Override
+    public String toString() {
+        if(mScanResult!=null){
+            return mScanResult.toString();
+        }
+
+        return "empty";
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    private BleScanDevice(Parcel in) {
+        readFromParcel(in);
+    }
+    private void readFromParcel(Parcel in) {
+        if (in.readInt() == 1) {
+            this.mScanResult = ScanResult.CREATOR.createFromParcel(in);
+        }
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        if(this.mScanResult!=null){
+            dest.writeInt(1);
+            this.mScanResult.writeToParcel(dest,flags);
+        }else {
+            dest.writeInt(0);
+        }
+    }
+
+    public static final Parcelable.Creator<BleScanDevice> CREATOR = new Creator<BleScanDevice>() {
+        @Override
+        public BleScanDevice createFromParcel(Parcel source) {
+            return new BleScanDevice(source);
+        }
+
+        @Override
+        public BleScanDevice[] newArray(int size) {
+            return new BleScanDevice[size];
+        }
+    };
 
     /**
      * Builder class for {@link BleScanDevice}.

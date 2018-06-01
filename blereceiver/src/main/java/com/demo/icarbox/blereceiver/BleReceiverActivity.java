@@ -16,9 +16,12 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.alibaba.android.arouter.facade.annotation.Route;
+import com.google.gson.Gson;
 import com.guiying.module.common.base.BaseActionBarActivity;
 import com.guiying.module.common.utils.Utils;
-import com.icarbonx.smartdevice.manager.ble.BleDevice;
+import com.icarbonx.smartdevice.http.BleHttpManager;
+import com.icarbonx.smartdevice.ble.manager.BleDevice;
+import com.icarbonx.smartdevice.ble.manager.BleScanDevice;
 import com.jude.easyrecyclerview.EasyRecyclerView;
 import com.jude.easyrecyclerview.adapter.BaseViewHolder;
 import com.jude.easyrecyclerview.adapter.RecyclerArrayAdapter;
@@ -28,10 +31,10 @@ import java.util.Iterator;
 import java.util.List;
 
 import no.nordicsemi.android.support.v18.scanner.ScanFilter;
-import no.nordicsemi.android.support.v18.scanner.ScanResult;
 
 @Route(path = "/ble/receiver")
 public class BleReceiverActivity extends BaseActionBarActivity implements SwipeRefreshLayout.OnRefreshListener, View.OnClickListener {
+    private static final  String TAG = BleReceiverActivity.class.getName();
 
     private EasyRecyclerView mEasyRecyclerView;
     private DeviceAdaper mDeviceAdaper;
@@ -58,6 +61,8 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
 
         findViewById(R.id.serviceStart).setOnClickListener(this);
         findViewById(R.id.serviceStop).setOnClickListener(this);
+
+        BleHttpManager.getInstance(this);
     }
 
     @Override
@@ -83,17 +88,41 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
     BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            //Log.e("receiver broad",context.getPackageName());
+            Log.e("receiver broad",context.getPackageName());
             if (intent.getAction().equals(ScannerService.ACTION)) {
                 if (intent.getIntExtra(ScannerService.STATUS_I, -1) == ScannerService.STATUS.SINGLE) {
-                    mDeviceAdaper.addDataByScanResult(intent.getParcelableExtra(ScanResult.class.getName()));
-                } else if (intent.getIntExtra(ScannerService.STATUS_I, -1) == ScannerService.STATUS.BATCH) {
-                    mDeviceAdaper.addDataByScanResults(intent.getParcelableArrayListExtra(ScanResult.class.getName()));
-                } else {//scan failed
+                    BleScanDevice scanDevice = intent.getParcelableExtra(BleScanDevice.class.getName());
+//                    DeviceDataBean dataBean = new DeviceDataBean();
+//                    dataBean.setDeviceID(scanDevice.getMac());
+//                    dataBean.setAdvData(Utils.byteArray2String(scanDevice.getScanRawData()));
+//
+//                    BleHttpManager.getInstance(BleReceiverActivity.this).SetDataBody(new Gson().toJson(dataBean,DeviceDataBean.class));
+//                    BleHttpManager.getInstance(BleReceiverActivity.this).setIBleHttpResult(iBleResult);
+//
+//                    new Thread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            BleHttpManager.getInstance(BleReceiverActivity.this).upload();
+//                        }
+//                    }).start();
 
+                    mDeviceAdaper.addDataByScanResult(scanDevice);
+                } else if (intent.getIntExtra(ScannerService.STATUS_I, -1) == ScannerService.STATUS.FAILURE) {
+//                    mDeviceAdaper.addDataByScanResults(intent.getParcelableArrayListExtra(ScanResult.class.getName()));
                 }
-
             }
+        }
+    };
+
+    private BleHttpManager.IBleHttpResult iBleResult = new BleHttpManager.IBleHttpResult() {
+        @Override
+        public void onSuccess() {
+            Log.e(TAG,"upload successfully");
+        }
+
+        @Override
+        public void onFail() {
+            Log.e(TAG,"upload fialed");
         }
     };
 
@@ -102,6 +131,7 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
         if (v.getId() == R.id.serviceStart) {
             Intent intent = new Intent(this, ScannerService.class);
             intent.putExtra(ScannerService.CONTROL_I, 1);
+
             ArrayList<ScanFilter> scanFilters = new ArrayList<>();
             scanFilters.add(new ScanFilter.Builder().setDeviceName("bong4").build());
             intent.putParcelableArrayListExtra(ScanFilter.class.getName(),scanFilters);
@@ -142,12 +172,13 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
          *
          * @param scanResult
          */
-        public void addDataByScanResult(ScanResult scanResult) {
+        public void addDataByScanResult(BleScanDevice scanResult) {
+            Log.e("rssi",scanResult.getRssi()+""+scanResult.getMac());
             BleDevice bleDevice = new BleDevice()
                     .addRssi(scanResult.getRssi())
-                    .addMac(scanResult.getDevice().getAddress())
-                    .addName(scanResult.getDevice().getName())
-                    .addScanData(scanResult.getScanRecord().getBytes());
+                    .addMac(scanResult.getMac())
+                    .addName(scanResult.getName())
+                    .addScanData(scanResult.getScanRawData());
 
             int ind = mObjects.indexOf(bleDevice);
             if (ind > 0) {
@@ -162,8 +193,8 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
          *
          * @param list
          */
-        public void addDataByScanResults(List<ScanResult> list) {
-            Iterator<ScanResult> iterator = list.iterator();
+        public void addDataByScanResults(List<BleScanDevice> list) {
+            Iterator<BleScanDevice> iterator = list.iterator();
             while (iterator.hasNext()) {
                 addDataByScanResult(iterator.next());
             }

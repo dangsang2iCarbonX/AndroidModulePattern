@@ -1,8 +1,4 @@
-package com.icarbonx.smartdevice.manager.ble;
-
-import no.nordicsemi.android.support.v18.scanner.BluetoothLeScannerCompat;
-import no.nordicsemi.android.support.v18.scanner.ScanResult;
-import no.nordicsemi.android.support.v18.scanner.ScanSettings;
+package com.icarbonx.smartdevice.ble.manager;
 
 /**
  * Bluetooth device class
@@ -37,33 +33,18 @@ public class BleDevice {
     }
 
     /**
-     * Initialize class from {@link ScanResult} by {@link BluetoothLeScannerCompat}
+     * Initialize class from {@link BleScanDevice}
      *
-     * @param scanResult {@link ScanResult} object
+     * @param scanDevice {@link BleScanDevice} object
      */
-    public void initFromScanResult(ScanResult scanResult) {
-        if (scanResult == null) return;
+    public void initFromScanResult(BleScanDevice scanDevice) {
+        if (scanDevice == null) return;
 
-        //Priority get device name
-        if (scanResult.getDevice().getName() != null) {
-            this.name = scanResult.getDevice().getName();
+        this.name = scanDevice.getName();
 
-        }//Get advertised device local name
-        else if (scanResult.getScanRecord().getDeviceName() != null) {
-            this.name = scanResult.getScanRecord().getDeviceName();
-
-        }//Got no device name return specified String as name
-        else {
-            this.name = String.format("iCarbonX-%00004d", (int) (Math.random() * 1000 + 1));
-        }
-
-        this.rssi = scanResult.getRssi();
-        this.mac = scanResult.getDevice().getAddress();
-        byte[] bytes = scanResult.getScanRecord().getBytes();
-        if (bytes == null) return;
-
-        this.scanData = new byte[bytes.length];
-        System.arraycopy(bytes, 0, this.scanData, 0, bytes.length);
+        this.rssi = scanDevice.getRssi();
+        this.mac = scanDevice.getMac();
+        this.scanData = scanDevice.getScanRawData();
     }
 
     /**

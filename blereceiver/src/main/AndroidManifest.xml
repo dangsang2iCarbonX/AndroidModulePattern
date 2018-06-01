@@ -6,7 +6,6 @@
         <activity android:name=".BleReceiverActivity"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar"/>
-        <service android:name=".ScannerService"></service>
     </application>
 
 </manifest>
