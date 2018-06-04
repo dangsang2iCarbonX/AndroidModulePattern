@@ -21,6 +21,7 @@ import com.icarbonx.smartdevice.common.ICarbonXEception;
  */
 @Route(path = "/ble/demo/blescanmanager")
 public class DemoBleScanManagerActivity extends AppCompatActivity {
+    private static final String Tag = DemoBleScanManagerActivity.class.getSimpleName();
     TextView text;
 
 
@@ -53,6 +54,7 @@ public class DemoBleScanManagerActivity extends AppCompatActivity {
         } catch (ICarbonXEception iCarbonXEception) {
             iCarbonXEception.printStackTrace();
         }
+        Log.e(Tag,"onCreate");
     }
 
     @Override
@@ -86,24 +88,28 @@ public class DemoBleScanManagerActivity extends AppCompatActivity {
 
             }
         });
+        Log.e(Tag,"onStart");
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         BleScanManager.getInstance().startScan();
+        Log.e(Tag,"onResume");
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         BleScanManager.getInstance().stopScan();
+        Log.e(Tag,"onPause");
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         BleScanManager.getInstance().release();
+        Log.e(Tag,"onDestroy");
     }
 
 

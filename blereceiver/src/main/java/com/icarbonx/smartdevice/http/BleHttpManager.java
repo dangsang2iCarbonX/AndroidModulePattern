@@ -140,6 +140,7 @@ public class BleHttpManager extends NeedPermissionManager {
                         .post(requestBody)
                         .build());
         _id++;
+        Log.e("","--:"+_id);
         mCallIDArrayMap.put(call, _id);
         call.enqueue(responseCallback);
     }

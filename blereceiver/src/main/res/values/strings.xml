@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">BleReceiver</string>
     <string name="str_ble_receiver_title">蓝牙数据收集</string>
-    <string name="str_demo_ble_scan_manager_title">BleScanManger Demo</string>
+    <string name="str_demo_ble_scan_manager_title">BleScanManager Demo</string>
+    <string name="str_demo_ble_http_manager_title">BleHttpManager Demo</string>
 
 </resources>
