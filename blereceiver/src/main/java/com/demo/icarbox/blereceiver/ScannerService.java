@@ -9,6 +9,10 @@ import android.util.Log;
 
 import com.icarbonx.smartdevice.ble.manager.BleScanDevice;
 import com.icarbonx.smartdevice.ble.manager.BleScanManager;
+import com.icarbonx.smartdevice.common.ICarbonXEception;
+import com.icarbonx.smartdevice.exceptin.BleNotFoundException;
+import com.icarbonx.smartdevice.exceptin.BleNotSupportException;
+import com.icarbonx.smartdevice.exceptin.NotActivityException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +39,7 @@ public class ScannerService extends Service {
     /**
      * Status code for scan result.
      */
-    public static class STATUS{
+    public static class STATUS {
         public final static int SINGLE = 1;
         public final static int BATCH = 2;
         public final static int FAILURE = -1;
@@ -52,7 +56,12 @@ public class ScannerService extends Service {
         super.onCreate();
 
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(getApplicationContext());
-        BleScanManager.getInstance(getApplicationContext());
+
+        try {
+            BleScanManager.getInstance().init(this);
+        } catch (ICarbonXEception iCarbonXEception) {
+            iCarbonXEception.printStackTrace();
+        }
 
         Log.e(TAG, "onCreate");
     }
@@ -75,12 +84,13 @@ public class ScannerService extends Service {
                 Log.e(TAG, "onStartCommand stop scan" + controlCode);
 //                BluetoothLeScannerCompat.getScanner().stopScan(scanCallback);
                 isScanning = false;
-                BleScanManager.getInstance(this).stopScan();
+                    BleScanManager.getInstance().stopScan();
+
             }
             stopSelf(startId);
             return super.onStartCommand(intent, flags, startId);
         }
-        if (controlCode == 1 && (isScanning==false)) {
+        if (controlCode == 1 && (isScanning == false)) {
             ArrayList<ScanFilter> filters = intent.getParcelableArrayListExtra(ScanFilter.class.getName());
             ScanSettings scanSettings = intent.getParcelableExtra(ScanSettings.class.getName());
 
@@ -94,9 +104,11 @@ public class ScannerService extends Service {
             isScanning = true;
 //            BluetoothLeScannerCompat scanner = BluetoothLeScannerCompat.getScanner();
 //            scanner.startScan(filters, scanSettings, scanCallback);
-            BleScanManager.getInstance(this).setIBleScanResult(mIBleScanResult);
-            //BleScanManager.getInstance(this).filterByRssi(-60);
-            BleScanManager.getInstance(this).startScan();
+
+                BleScanManager.getInstance().setIBleScanResult(mIBleScanResult);
+                BleScanManager.getInstance().filterByRssi(-60);
+                BleScanManager.getInstance().startScan();
+
         }
         return super.onStartCommand(intent, flags, startId);
     }
@@ -105,10 +117,14 @@ public class ScannerService extends Service {
     public void onDestroy() {
         super.onDestroy();
 
-        if(isScanning){
+            if (isScanning) {
 //            BluetoothLeScannerCompat.getScanner().stopScan(scanCallback);
-            BleScanManager.getInstance(this).stopScan();
-        }
+
+                BleScanManager.getInstance().stopScan();
+
+            }
+            BleScanManager.getInstance().release();
+
 //        mLocalBroadcastManager = null;
         Log.e(TAG, "onDestroy");
     }
@@ -119,7 +135,7 @@ public class ScannerService extends Service {
             mLocalBroadcastManager.sendBroadcast(new Intent()
                     .setAction(ACTION)
                     .putExtra(BleScanDevice.class.getName(), bleScanDevice)
-                    .putExtra(STATUS_I,STATUS.SINGLE)
+                    .putExtra(STATUS_I, STATUS.SINGLE)
             );
         }
 
@@ -140,7 +156,7 @@ public class ScannerService extends Service {
             mLocalBroadcastManager.sendBroadcast(new Intent()
                     .setAction(ACTION)
                     .putExtra(ScanResult.class.getName(), result)
-                    .putExtra(STATUS_I,STATUS.SINGLE)
+                    .putExtra(STATUS_I, STATUS.SINGLE)
             );
 
         }
@@ -158,7 +174,7 @@ public class ScannerService extends Service {
 
         @Override
         public void onScanFailed(int errorCode) {
-            Log.e(TAG, "onScanFailed: "+errorCode);
+            Log.e(TAG, "onScanFailed: " + errorCode);
             mLocalBroadcastManager.sendBroadcast(new Intent()
                     .setAction(ACTION)
                     .putExtra(STATUS_I, STATUS.FAILURE)

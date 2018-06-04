@@ -19,6 +19,11 @@ import com.alibaba.android.arouter.facade.annotation.Route;
 import com.google.gson.Gson;
 import com.guiying.module.common.base.BaseActionBarActivity;
 import com.guiying.module.common.utils.Utils;
+import com.icarbonx.smartdevice.ble.manager.BleScanManager;
+import com.icarbonx.smartdevice.common.ICarbonXEception;
+import com.icarbonx.smartdevice.exceptin.BleNotFoundException;
+import com.icarbonx.smartdevice.exceptin.BleNotSupportException;
+import com.icarbonx.smartdevice.exceptin.NotActivityException;
 import com.icarbonx.smartdevice.http.BleHttpManager;
 import com.icarbonx.smartdevice.ble.manager.BleDevice;
 import com.icarbonx.smartdevice.ble.manager.BleScanDevice;
@@ -62,7 +67,12 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
         findViewById(R.id.serviceStart).setOnClickListener(this);
         findViewById(R.id.serviceStop).setOnClickListener(this);
 
-        BleHttpManager.getInstance(this);
+        try {
+            BleHttpManager.getInstance().init(this);
+//            BleScanManager.getInstance().init(this);
+        } catch (ICarbonXEception iCarbonXEception) {
+            iCarbonXEception.printStackTrace();
+        }
     }
 
     @Override
@@ -83,7 +93,12 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
                 .unregisterReceiver(broadcastReceiver);
     }
 
-//    ScanBroadcastReceiver scanBroadcastReceiver = new ScanBroadcastReceiver();
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
+    //    ScanBroadcastReceiver scanBroadcastReceiver = new ScanBroadcastReceiver();
 
     BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
@@ -92,19 +107,15 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
             if (intent.getAction().equals(ScannerService.ACTION)) {
                 if (intent.getIntExtra(ScannerService.STATUS_I, -1) == ScannerService.STATUS.SINGLE) {
                     BleScanDevice scanDevice = intent.getParcelableExtra(BleScanDevice.class.getName());
-//                    DeviceDataBean dataBean = new DeviceDataBean();
-//                    dataBean.setDeviceID(scanDevice.getMac());
-//                    dataBean.setAdvData(Utils.byteArray2String(scanDevice.getScanRawData()));
-//
-//                    BleHttpManager.getInstance(BleReceiverActivity.this).SetDataBody(new Gson().toJson(dataBean,DeviceDataBean.class));
-//                    BleHttpManager.getInstance(BleReceiverActivity.this).setIBleHttpResult(iBleResult);
-//
-//                    new Thread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            BleHttpManager.getInstance(BleReceiverActivity.this).upload();
-//                        }
-//                    }).start();
+                    DeviceDataBean dataBean = new DeviceDataBean();
+                    dataBean.setDeviceID(scanDevice.getMac());
+                    dataBean.setAdvData(Utils.byteArray2String(scanDevice.getScanRawData()));
+
+
+                        BleHttpManager.getInstance()
+                                .addDataBody(new Gson().toJson(dataBean,DeviceDataBean.class))
+                                .addIBleHttpResult(iBleResult)
+                                .startRequest();
 
                     mDeviceAdaper.addDataByScanResult(scanDevice);
                 } else if (intent.getIntExtra(ScannerService.STATUS_I, -1) == ScannerService.STATUS.FAILURE) {
@@ -115,14 +126,15 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
     };
 
     private BleHttpManager.IBleHttpResult iBleResult = new BleHttpManager.IBleHttpResult() {
+
         @Override
-        public void onSuccess() {
-            Log.e(TAG,"upload successfully");
+        public void onSuccess(long callID, String responseBody) {
+            Log.e(TAG,"upload successfully"+callID);
         }
 
         @Override
-        public void onFail() {
-            Log.e(TAG,"upload fialed");
+        public void onFail(long callID) {
+            Log.e(TAG,"upload failed"+callID);
         }
     };
 

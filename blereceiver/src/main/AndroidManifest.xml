@@ -6,6 +6,7 @@
         <activity android:name=".BleReceiverActivity"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar"/>
+        <activity android:name=".DemoBleScanManagerActivity"/>
     </application>
 
 </manifest>

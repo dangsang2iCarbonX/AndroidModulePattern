@@ -8,11 +8,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.support.annotation.RequiresPermission;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.widget.Toast;
 
+import com.icarbonx.smartdevice.common.ICarbonXEception;
+import com.icarbonx.smartdevice.common.NeedPermissionManager;
 import com.icarbonx.smartdevice.common.PermissionRequestCode;
+import com.icarbonx.smartdevice.exceptin.BleNotFoundException;
+import com.icarbonx.smartdevice.exceptin.BleNotSupportException;
+import com.icarbonx.smartdevice.exceptin.NotActivityException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,10 +30,12 @@ import no.nordicsemi.android.support.v18.scanner.ScanSettings;
 
 /**
  * Manage ble scan start/stop and filter devices while scanning
+ * Work in the caller thread.
+ * <p>After call the class method {@link BleScanManager#getInstance()}, should call {@link BleScanManager#init(Context)} to pass {@code context} in.</p>
  *
  * @author lavi
  */
-public class BleScanManager {
+public class BleScanManager extends NeedPermissionManager {
     private static BleScanManager mBleManager;
 
     //Permission request code
@@ -61,14 +68,11 @@ public class BleScanManager {
     /**
      * Get the instance of BleScanManager
      *
-     * @param context Context
-     * @return BleScanManager object
+     * @return {@link BleScanManager} object
      */
-    public static BleScanManager getInstance(Context context) {
+    public static BleScanManager getInstance() {
         if (mBleManager == null) {
             mBleManager = new BleScanManager();
-            checkPermissions(context);
-            checkBleOn(context);
         }
         return mBleManager;
     }
@@ -83,42 +87,21 @@ public class BleScanManager {
                 .setUseHardwareBatchingIfSupported(false).build();
     }
 
-    /**
-     * Check if bluetooth is not open, or ask to open it.
-     */
-    private static void checkBleOn(Context context) {
-        //判断是否支持蓝牙4.0
-        if (!context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-            Toast.makeText(context, "Bluetooth not found", Toast.LENGTH_SHORT).show();
-            if (context instanceof Activity) {
-                ((Activity) context).finish();
-                //throw exception model
+    @Override
+    public void init(Context context) throws ICarbonXEception {
 
-            }
-        }
-        //获取蓝牙适配器
-        BluetoothManager bluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
-        BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
-        //判断是否支持蓝牙
-        if (bluetoothAdapter == null) {
-            //不支持
-            Toast.makeText(context, "Bluetooth not supported", Toast.LENGTH_SHORT).show();
-            if (context instanceof Activity) {
-                ((Activity) context).finish();
-            }
-        } else {
-            //打开蓝牙
-            if (!bluetoothAdapter.isEnabled()) {//判断是否已经打开
-                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                context.startActivity(enableBtIntent);
-            }
-        }
+        checkBleOn();
+
+        super.init(context);
     }
 
     /**
      * Request needed permissions.
      */
-    private static void checkPermissions(Context context) {
+    @Override
+    protected void checkPermissions() throws NotActivityException {
+        if (mContext==null)return;
+
         //If build version is less than 23, request permission in AndroidManefest.xml.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return;
@@ -132,13 +115,57 @@ public class BleScanManager {
         };
         ArrayList<String> needPermissions = new ArrayList<>();
         for (String p : permissions) {
-            if (ContextCompat.checkSelfPermission(context, p) != PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat.checkSelfPermission(mContext, p) != PackageManager.PERMISSION_GRANTED) {
                 needPermissions.add(p);
             }
         }
         //If not all permission needed granted, grant them.
         if (needPermissions.size() > 0) {
-            ActivityCompat.requestPermissions((Activity) context, (String[]) needPermissions.toArray(), PermissionRequestCode.BLE_PERMMISION_REQUEST);
+            if (mContext instanceof Activity) {
+                ActivityCompat.requestPermissions((Activity) mContext, (String[]) needPermissions.toArray(), PermissionRequestCode.BLE_PERMMISION_REQUEST);
+            } else {
+                throw new NotActivityException();
+            }
+        }
+    }
+
+    /**
+     * Check if bluetooth is not open, or ask to open it.
+     */
+    @RequiresPermission(Manifest.permission.BLUETOOTH)
+    private void checkBleOn() throws BleNotSupportException, BleNotFoundException, NotActivityException {
+        if(mContext==null)return;
+
+        //判断是否支持蓝牙4.0
+        if (!mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+            //Toast.makeText(context, "Bluetooth not found", Toast.LENGTH_SHORT).show();
+            throw new BleNotFoundException();
+//            if (context instanceof Activity)
+//            {
+//                ((Activity) context).finish();
+//            }
+        }
+        //获取蓝牙适配器
+        BluetoothManager bluetoothManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
+        BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
+        //判断是否支持蓝牙
+        if (bluetoothAdapter == null) {
+            //不支持
+//            Toast.makeText(context, "Bluetooth not supported", Toast.LENGTH_SHORT).show();
+//            if (context instanceof Activity) {
+//                ((Activity) context).finish();
+//            }
+            throw new BleNotSupportException();
+        } else {
+            //打开蓝牙
+            if (!bluetoothAdapter.isEnabled()) {//判断是否已经打开
+                if (mContext instanceof Activity) {
+                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                    ((Activity) mContext).startActivity(enableBtIntent);
+                } else {
+                    throw new NotActivityException();
+                }
+            }
         }
     }
 
@@ -154,6 +181,7 @@ public class BleScanManager {
     /**
      * Start scanning for devices
      */
+    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH})
     public void startScan() {
         BluetoothLeScannerCompat scanner = BluetoothLeScannerCompat.getScanner();
         try {
@@ -166,6 +194,7 @@ public class BleScanManager {
     /**
      * Stop scanning for devices
      */
+    @RequiresPermission(Manifest.permission.BLUETOOTH_ADMIN)
     public void stopScan() {
         BluetoothLeScannerCompat scanner = BluetoothLeScannerCompat.getScanner();
         scanner.stopScan(scanCallback);

@@ -1,6 +1,7 @@
 package com.demo.icarbox.blereceiver;
 
 import android.os.Bundle;
+import android.os.ParcelUuid;
 import android.support.v7.app.AppCompatActivity;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -12,11 +13,13 @@ import com.guiying.module.common.base.BaseActionBarActivity;
 import com.guiying.module.common.utils.Utils;
 import com.icarbonx.smartdevice.ble.manager.BleScanDevice;
 import com.icarbonx.smartdevice.ble.manager.BleScanManager;
+import com.icarbonx.smartdevice.common.ICarbonXEception;
 
 /**
  * Demo activity for {@link BleScanManager} usage.
  * @author lavi
  */
+@Route(path = "/ble/demo/blescanmanager")
 public class DemoBleScanManagerActivity extends AppCompatActivity {
     TextView text;
 
@@ -45,16 +48,20 @@ public class DemoBleScanManagerActivity extends AppCompatActivity {
         text =findViewById(R.id.text);
         text.setMovementMethod(ScrollingMovementMethod.getInstance());
 
-        BleScanManager.getInstance(this);
+        try {
+            BleScanManager.getInstance().init(this);
+        } catch (ICarbonXEception iCarbonXEception) {
+            iCarbonXEception.printStackTrace();
+        }
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        BleScanManager.getInstance(this).filterByRssi(-65);
+        BleScanManager.getInstance().filterByRssi(-65);
 //        BleScanManager.getInstance(this).filterByName("bong4");
 //        BleScanManager.getInstance(this).filterByMac(":::::");
-        BleScanManager.getInstance(this).setIBleScanResult(new BleScanManager.IBleScanResult() {
+        BleScanManager.getInstance().setIBleScanResult(new BleScanManager.IBleScanResult() {
             @Override
             public void onResult(BleScanDevice bleScanDevice) {
                 StringBuilder builder = new StringBuilder();
@@ -84,19 +91,19 @@ public class DemoBleScanManagerActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        BleScanManager.getInstance(this).startScan();
+        BleScanManager.getInstance().startScan();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        BleScanManager.getInstance(this).stopScan();
+        BleScanManager.getInstance().stopScan();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        BleScanManager.getInstance(this).release();
+        BleScanManager.getInstance().release();
     }
 
 
