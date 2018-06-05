@@ -1,5 +1,7 @@
 package com.demo.icarbox.blereceiver;
 
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -39,11 +41,12 @@ import no.nordicsemi.android.support.v18.scanner.ScanFilter;
 
 @Route(path = "/ble/receiver")
 public class BleReceiverActivity extends BaseActionBarActivity implements SwipeRefreshLayout.OnRefreshListener, View.OnClickListener {
-    private static final  String TAG = BleReceiverActivity.class.getName();
+    private static final String TAG = BleReceiverActivity.class.getName();
 
     private EasyRecyclerView mEasyRecyclerView;
     private DeviceAdaper mDeviceAdaper;
     private Handler handler;
+    private BodyFatManager mBodyFatManager;
 
     @Override
     protected int setTitleId() {
@@ -67,12 +70,14 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
         findViewById(R.id.serviceStart).setOnClickListener(this);
         findViewById(R.id.serviceStop).setOnClickListener(this);
 
-        try {
-            BleHttpManager.getInstance().init(this);
-//            BleScanManager.getInstance().init(this);
-        } catch (ICarbonXEception iCarbonXEception) {
-            iCarbonXEception.printStackTrace();
-        }
+        mBodyFatManager = new BodyFatManager(this);
+        mBodyFatManager.setGattCallbacks(mBodyFatManagerCallbacks);
+//        try {
+//            BleHttpManager.getInstance().init(this);
+////            BleScanManager.getInstance().init(this);
+//        } catch (ICarbonXEception iCarbonXEception) {
+//            iCarbonXEception.printStackTrace();
+//        }
     }
 
     @Override
@@ -91,19 +96,108 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
         super.onPause();
         LocalBroadcastManager.getInstance(getApplicationContext())
                 .unregisterReceiver(broadcastReceiver);
+        mBodyFatManager.close();
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    protected void onStop() {
+        super.onStop();
     }
 
-    //    ScanBroadcastReceiver scanBroadcastReceiver = new ScanBroadcastReceiver();
+    BodyFatManagerCallbacks mBodyFatManagerCallbacks = new BodyFatManagerCallbacks() {
+        @Override
+        public void onReceive(byte[] data) {
+            Log.e(TAG,"data received: "
+                    +String.format("%2x%3x%3x%3x%3x%3x%3x%3x",
+                    data[0],data[1],data[2],data[3],data[4],data[5],data[6],data[7]));
+        }
+
+        @Override
+        public void onDataSent(byte[] data) {
+            Log.e(TAG,"data sent: "
+                    +String.format("%2x%3x%3x%3x%3x%3x%3x%3x",
+                    data[0],data[1],data[2],data[3],data[4],data[5],data[6],data[7]));
+        }
+
+        @Override
+        public void onDeviceSleep() {
+            Log.e(TAG,"device entry low power mode");
+        }
+
+        @Override
+        public void onDeviceConnecting(BluetoothDevice device) {
+
+        }
+
+        @Override
+        public void onDeviceConnected(BluetoothDevice device) {
+            Log.e(TAG,device.getAddress()+ " connected");
+        }
+
+        @Override
+        public void onDeviceDisconnecting(BluetoothDevice device) {
+            Log.e(TAG,device.getAddress()+ " disconnecting");
+        }
+
+        @Override
+        public void onDeviceDisconnected(BluetoothDevice device) {
+            Log.e(TAG,device.getAddress()+ " disconnected");
+        }
+
+        @Override
+        public void onLinklossOccur(BluetoothDevice device) {
+
+        }
+
+        @Override
+        public void onServicesDiscovered(BluetoothDevice device, boolean optionalServicesFound) {
+            Log.e(TAG,device.getAddress()+ " onServicesDiscovered");
+        }
+
+        @Override
+        public void onDeviceReady(BluetoothDevice device) {
+            Log.e(TAG,device.getAddress()+ " onDeviceReady");
+//            mBodyFatManager.addUser(3,1,20,170,0,0,
+//                    0,0,0,0,0,0);
+//            mBodyFatManager.synUser();
+            mBodyFatManager.setCurrentUser(3,1,20,170);
+        }
+
+        @Override
+        public boolean shouldEnableBatteryLevelNotifications(BluetoothDevice device) {
+            return false;
+        }
+
+        @Override
+        public void onBatteryValueReceived(BluetoothDevice device, int value) {
+
+        }
+
+        @Override
+        public void onBondingRequired(BluetoothDevice device) {
+
+        }
+
+        @Override
+        public void onBonded(BluetoothDevice device) {
+
+        }
+
+        @Override
+        public void onError(BluetoothDevice device, String message, int errorCode) {
+            Log.e(TAG,device.getAddress()+ errorCode +message);
+        }
+
+        @Override
+        public void onDeviceNotSupported(BluetoothDevice device) {
+            Log.e(TAG,device.getAddress()+ " device does not contain service demanded");
+        }
+    };
 
     BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            Log.e("receiver broad",context.getPackageName());
+            Log.e("receive device", context.getPackageName());
             if (intent.getAction().equals(ScannerService.ACTION)) {
                 if (intent.getIntExtra(ScannerService.STATUS_I, -1) == ScannerService.STATUS.SINGLE) {
                     BleScanDevice scanDevice = intent.getParcelableExtra(BleScanDevice.class.getName());
@@ -111,11 +205,15 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
                     dataBean.setDeviceID(scanDevice.getMac());
                     dataBean.setAdvData(Utils.byteArray2String(scanDevice.getScanRawData()));
 
-
-                        BleHttpManager.getInstance()
-                                .addDataBody(new Gson().toJson(dataBean,DeviceDataBean.class))
-                                .addIBleHttpResult(iBleResult)
-                                .startRequest();
+                    if(scanDevice.getName().equals("ICX-ABF")) {
+                        mBodyFatManager.connect(BluetoothAdapter.getDefaultAdapter()
+                                .getRemoteDevice(scanDevice.getMac()));
+                        findViewById(R.id.serviceStop).callOnClick();
+                    }
+//                    BleHttpManager.getInstance()
+//                            .addDataBody(new Gson().toJson(dataBean, DeviceDataBean.class))
+//                            .addIBleHttpResult(iBleResult)
+//                            .startRequest();
 
                     mDeviceAdaper.addDataByScanResult(scanDevice);
                 } else if (intent.getIntExtra(ScannerService.STATUS_I, -1) == ScannerService.STATUS.FAILURE) {
@@ -129,12 +227,12 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
 
         @Override
         public void onSuccess(long callID, String responseBody) {
-            Log.e(TAG,"upload successfully"+callID);
+            Log.e(TAG, "upload successfully" + callID);
         }
 
         @Override
         public void onFail(long callID) {
-            Log.e(TAG,"upload failed"+callID);
+            Log.e(TAG, "upload failed" + callID);
         }
     };
 
@@ -146,7 +244,7 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
 
             ArrayList<ScanFilter> scanFilters = new ArrayList<>();
             scanFilters.add(new ScanFilter.Builder().setDeviceName("bong4").build());
-            intent.putParcelableArrayListExtra(ScanFilter.class.getName(),scanFilters);
+            intent.putParcelableArrayListExtra(ScanFilter.class.getName(), scanFilters);
 
             startService(intent);
         } else if (v.getId() == R.id.serviceStop) {
@@ -185,7 +283,7 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
          * @param scanResult
          */
         public void addDataByScanResult(BleScanDevice scanResult) {
-            Log.e("rssi",scanResult.getRssi()+""+scanResult.getMac());
+            Log.e("rssi", scanResult.getRssi() + "["+scanResult.getName()+"]" + scanResult.getMac());
             BleDevice bleDevice = new BleDevice()
                     .addRssi(scanResult.getRssi())
                     .addMac(scanResult.getMac())
@@ -196,7 +294,7 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
             if (ind > 0) {
                 update(bleDevice, ind);
             } else {
-                if(getCount()<20)add(bleDevice);
+                if (getCount() < 20) add(bleDevice);
             }
         }
 
