@@ -106,7 +106,7 @@ public class ScannerService extends Service {
 //            scanner.startScan(filters, scanSettings, scanCallback);
 
                 BleScanManager.getInstance().setIBleScanResult(mIBleScanResult);
-                BleScanManager.getInstance().filterByRssi(-70);
+                BleScanManager.getInstance().filterByRssi(-80);
 //                BleScanManager.getInstance().filterByName("xt_gateway");
 //                BleScanManager.getInstance().filterByName("ICX-ABF");
                 BleScanManager.getInstance().startScan();

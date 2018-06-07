@@ -7,10 +7,14 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
+import com.guiying.module.common.utils.Utils;
 import com.icarbonx.smartdevice.ble.manager.BleGattManager;
 import com.icarbonx.smartdevice.ble.manager.BleGattManagerCallbacks;
+import com.icarbonx.smartdevice.bodyfat.BodyFatCmds;
+import com.icarbonx.smartdevice.bodyfat.BodyFatUser;
 
 import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.UUID;
@@ -96,20 +100,22 @@ public class BodyFatManager extends BleGattManager<BodyFatManagerCallbacks> {
 
         @Override
         protected void onCharacteristicIndicated(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            if(characteristic == mNotyCharacteric)
-                dataChanged(gatt,characteristic);
+            if (characteristic == mNotyCharacteric)
+                dataChanged(gatt, characteristic);
         }
 
         @Override
         public void onCharacteristicNotified(final BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic) {
-            if(characteristic == mNotyCharacteric)
-                dataChanged(gatt,characteristic);
+            if (characteristic == mNotyCharacteric)
+                dataChanged(gatt, characteristic);
         }
 
         private void dataChanged(final BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic) {
             //BL send response
             final byte[] data = characteristic.getValue();
-            if (data.length == 8 && data[7] == 0xcc && data[2] == 0xfe) {
+//            Log.e("rv", "" + data.length + "RV" + byteArray2String(data));
+
+            if (data != null && data.length == 8 && data[6] == (byte) 0xcc && data[2] == (byte) 0xfe && data[3] == 1) {
                 mCallbacks.onDeviceSleep();
                 return;
             }
@@ -118,98 +124,71 @@ public class BodyFatManager extends BleGattManager<BodyFatManagerCallbacks> {
         }
     };
 
-
     /**
-     * Add user to device.
+     * Set device the current user
      *
-     * @param userId     User ID
-     * @param gender     User gender,1 for male,0 for female
-     * @param age        User age since birth.
-     * @param height     User body height in cm.
-     * @param weight     User weight before.
-     * @param impedance  User impendace of body.
-     * @param userId2    Second user ID.
-     * @param gender2    Second user gender,1 for male,0 for female
-     * @param age2       Second user age since birth.
-     * @param height2    Second user body height in cm.
-     * @param weight2    Sencond user weight before.
-     * @param impedance2 Second user impendace of body.
+     * @param bodyFatUser {@link BodyFatUser}
      */
-    void addUser(int userId, int gender, int age, int height, int weight, int impedance,
-                 int userId2, int gender2, int age2, int height2, int weight2, int impedance2) {
-        //18bytes for two users
-        byte[] data = new byte[4+8+8];
-        data[0] = (byte) 0xac;
-        data[1] = 2;
-        data[2] = (byte) 0xfd;
-        data[3] = 0;//添加用户信息标识
-        data[4] = (byte) userId;
-        data[5] = (byte) gender;
-        data[6] = (byte) age;
-        data[7] = (byte) height;
-        data[8] = (byte) (weight >> 8);
-        data[9] = (byte) weight;
-        data[10] = (byte) ((byte) impedance >> 8);
-        data[11] = (byte) impedance;
-        data[12] = (byte) userId2;
-        data[13] = (byte) gender2;
-        data[14] = (byte) age2;
-        data[15] = (byte) height2;
-        data[16] = (byte) (weight2 >> 8);
-        data[17] = (byte) weight2;
-        data[18] = (byte) ((byte) impedance2 >> 8);
-        data[19] = (byte) impedance2;
+    public void setCrrentUser(BodyFatUser bodyFatUser, int state) {
+        //同步用户列表
+        //添加同步指令
+        if (state == 1) {
+            enqueue(Request.newWriteRequest(mWriteCharactertic, new BodyFatCmds().getAddUserInfo(bodyFatUser)));
+        }
 
-        mWriteCharactertic.setValue(data);
-        Log.e(Tag, "start addUser");
-        writeCharacteristic(mWriteCharactertic);
+        //添加同步结束指令
+        if (state == 2) {
+            enqueue(Request.newWriteRequest(mWriteCharactertic, new BodyFatCmds().getAddUserEnd()));
+        }
+
+        //添加设置当前用户其他信息指令
+        if (state == 3) {
+            enqueue(Request.newWriteRequest(mWriteCharactertic, new BodyFatCmds().getUserId(bodyFatUser)));
+        }
+
+        //添加设置当前用户id指令
+        if (state == 4) {
+            enqueue(Request.newWriteRequest(mWriteCharactertic, new BodyFatCmds().getUserOther(bodyFatUser)));
+        }
+    }
+
+
+    public void setCurrentUserId(BodyFatUser bodyFatUser) {
+
+    }
+
+    public void synUser() {
+
+    }
+
+    public void addUsers(BodyFatUser bodyFatUser) {
+
     }
 
     /**
-     * Syn user after {@link #addUser(int, int, int, int, int, int, int, int, int, int, int, int)}.
+     * Data checking by sum, and use last byte.
      */
-    void synUser() {
-        byte[] data = {(byte) 0xac, 2, (byte) 0xfd, 02, 00, 00, (byte) 0xcf, (byte) 0xce};
-        mWriteCharactertic.setValue(data);
-        Log.e(Tag, "addUser ended");
-        writeCharacteristic(mWriteCharactertic);
-    }
-
-    /**
-     * Set current user to use.
-     *
-     * @param userId User ID
-     * @param gender User gender,1 for male,0 for female
-     * @param age    User age since birth.
-     * @param height User body height in cm.
-     */
-    void setCurrentUser(int userId, int gender, int age, int height) {
-        //When set current user, send data twice. One for user id, the other for other info,
-        byte[] data = {(byte) 0xAC, 02, 0, 0, 0, 0, (byte) 0xcc, 0};
-        data[2] = (byte) 0xfa;
-        data[3] = (byte) userId;
-        data[7] = sumCheck(data, 0, data.length - 1);
-
-        mWriteCharactertic.setValue(data);
-        writeCharacteristic(mWriteCharactertic);
-
-        byte[] data2 = {(byte) 0xAC, 02, 0, 0, 0, 0, (byte) 0xcc, 0};
-        data2[2] = (byte) 0xfb;
-        data2[3] = (byte) gender;
-        data2[4] = (byte) age;
-        data2[5] = (byte) height;
-
-        data2[7] = sumCheck(data2, 0, data2.length - 1);
-        mWriteCharactertic.setValue(data2);
-        writeCharacteristic(mWriteCharactertic);
-    }
-
-    byte sumCheck(byte[] data, int offset, int dest) {
+    private byte sumCheck(byte[] data, int offset, int length) {
         int v = 0;
-        for (int i = offset; i < dest; i++) {
+        for (int i = offset; i < length + offset; i++) {
             v = v + (data[i] & 0xff);
         }
 
         return (byte) v;
+    }
+
+    public static String byteArray2String(byte[] data) {
+        if (data == null) return "";
+
+        final char[] HEX_CHAR = {'0', '1', '2', '3', '4', '5', '6', '7', '8',
+                '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = 0; i < data.length; i++) {
+            stringBuilder.append(HEX_CHAR[(data[i] & 0xf0) >>> 4]);
+            stringBuilder.append(HEX_CHAR[(data[i] & 0x0f)]);
+            if (i < data.length - 1)
+                stringBuilder.append(" ");
+        }
+        return stringBuilder.toString();
     }
 }

@@ -6,11 +6,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.widget.SwipeRefreshLayout;
-import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.util.Log;
 import android.view.View;
@@ -18,17 +18,14 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.alibaba.android.arouter.facade.annotation.Route;
-import com.google.gson.Gson;
 import com.guiying.module.common.base.BaseActionBarActivity;
 import com.guiying.module.common.utils.Utils;
-import com.icarbonx.smartdevice.ble.manager.BleScanManager;
-import com.icarbonx.smartdevice.common.ICarbonXEception;
-import com.icarbonx.smartdevice.exceptin.BleNotFoundException;
-import com.icarbonx.smartdevice.exceptin.BleNotSupportException;
-import com.icarbonx.smartdevice.exceptin.NotActivityException;
-import com.icarbonx.smartdevice.http.BleHttpManager;
 import com.icarbonx.smartdevice.ble.manager.BleDevice;
 import com.icarbonx.smartdevice.ble.manager.BleScanDevice;
+import com.icarbonx.smartdevice.bodyfat.BodyFatData;
+import com.icarbonx.smartdevice.bodyfat.BodyFatDataHelper;
+import com.icarbonx.smartdevice.bodyfat.BodyFatUser;
+import com.icarbonx.smartdevice.http.BleHttpManager;
 import com.jude.easyrecyclerview.EasyRecyclerView;
 import com.jude.easyrecyclerview.adapter.BaseViewHolder;
 import com.jude.easyrecyclerview.adapter.RecyclerArrayAdapter;
@@ -36,7 +33,12 @@ import com.jude.easyrecyclerview.adapter.RecyclerArrayAdapter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ThreadPoolExecutor;
 
+import no.nordicsemi.android.ble.Request;
+import no.nordicsemi.android.log.LocalLogSession;
+import no.nordicsemi.android.log.LogSession;
+import no.nordicsemi.android.log.Logger;
 import no.nordicsemi.android.support.v18.scanner.ScanFilter;
 
 @Route(path = "/ble/receiver")
@@ -48,6 +50,9 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
     private Handler handler;
     private BodyFatManager mBodyFatManager;
 
+    //Body data helper helping parsing and callback.
+    BodyFatDataHelper bodyFatDataHelper = new BodyFatDataHelper();
+    BodyFatParser bodyFatParser = new BodyFatParser();
     @Override
     protected int setTitleId() {
         return R.string.str_ble_receiver_title;
@@ -72,18 +77,23 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
 
         mBodyFatManager = new BodyFatManager(this);
         mBodyFatManager.setGattCallbacks(mBodyFatManagerCallbacks);
+        mBodyFatManager.setLogger(Logger.newSession(this, "test", "bodyfat"));
 //        try {
 //            BleHttpManager.getInstance().init(this);
 ////            BleScanManager.getInstance().init(this);
 //        } catch (ICarbonXEception iCarbonXEception) {
 //            iCarbonXEception.printStackTrace();
 //        }
+
+//        LayoutInflater.Factory
+//        ThreadPoolExecutor
+        bodyFatDataHelper.setmIDataParser(bodyFatParser);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-
+        Log.e("", "onResume");
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ScannerService.ACTION);
 
@@ -94,34 +104,69 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
     @Override
     protected void onPause() {
         super.onPause();
+        Log.e("", "onPause");
         LocalBroadcastManager.getInstance(getApplicationContext())
                 .unregisterReceiver(broadcastReceiver);
+        mBodyFatManager.disconnect();
         mBodyFatManager.close();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
+        Log.e("", "onStop");
     }
 
+    class BodyFatParser extends BodyFatDataHelper.AbstractParser{
+        @Override
+        public void onBodyFatDataEndSending(BodyFatData bodyFatData) {
+            Log.e(TAG,bodyFatData.toString());
+        }
+
+        @Override
+        public void onChangingWeight(int weight) {
+            Log.e(TAG,"weight changing "+weight);
+        }
+    }
+
+    int controlSq = 0;
     BodyFatManagerCallbacks mBodyFatManagerCallbacks = new BodyFatManagerCallbacks() {
         @Override
         public void onReceive(byte[] data) {
-            Log.e(TAG,"data received: "
-                    +String.format("%2x%3x%3x%3x%3x%3x%3x%3x",
-                    data[0],data[1],data[2],data[3],data[4],data[5],data[6],data[7]));
+            Log.e(TAG, "data received: " + BodyFatManager.byteArray2String(data));
+            bodyFatDataHelper.parse(data);
         }
 
         @Override
         public void onDataSent(byte[] data) {
-            Log.e(TAG,"data sent: "
-                    +String.format("%2x%3x%3x%3x%3x%3x%3x%3x",
-                    data[0],data[1],data[2],data[3],data[4],data[5],data[6],data[7]));
+            Log.e(TAG, data.length + "data sent: " + BodyFatManager.byteArray2String(data));
+            controlSq++;
+            mBodyFatManager.setCrrentUser(
+                    new BodyFatUser()
+                            .setId(1)
+                            .setAge(0x1b)
+                            .setGender(1)
+                            .setHeight(0xaa),controlSq
+            );
+        }
+
+        @Override
+        public void onDeviceReady(BluetoothDevice device) {
+            Log.e(TAG, device.getAddress() + " onDeviceReady");
+            controlSq++;
+            mBodyFatManager.setCrrentUser(
+                    new BodyFatUser()
+                            .setId(1)
+                            .setAge(0x1b)
+                            .setGender(1)
+                            .setHeight(0xaa),controlSq
+            );
+
         }
 
         @Override
         public void onDeviceSleep() {
-            Log.e(TAG,"device entry low power mode");
+            Log.e(TAG, "device entry low power mode");
         }
 
         @Override
@@ -131,17 +176,17 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
 
         @Override
         public void onDeviceConnected(BluetoothDevice device) {
-            Log.e(TAG,device.getAddress()+ " connected");
+            Log.e(TAG, device.getAddress() + " connected");
         }
 
         @Override
         public void onDeviceDisconnecting(BluetoothDevice device) {
-            Log.e(TAG,device.getAddress()+ " disconnecting");
+            Log.e(TAG, device.getAddress() + " disconnecting");
         }
 
         @Override
         public void onDeviceDisconnected(BluetoothDevice device) {
-            Log.e(TAG,device.getAddress()+ " disconnected");
+            Log.e(TAG, device.getAddress() + " disconnected");
         }
 
         @Override
@@ -151,17 +196,9 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
 
         @Override
         public void onServicesDiscovered(BluetoothDevice device, boolean optionalServicesFound) {
-            Log.e(TAG,device.getAddress()+ " onServicesDiscovered");
+            Log.e(TAG, device.getAddress() + " onServicesDiscovered");
         }
 
-        @Override
-        public void onDeviceReady(BluetoothDevice device) {
-            Log.e(TAG,device.getAddress()+ " onDeviceReady");
-//            mBodyFatManager.addUser(3,1,20,170,0,0,
-//                    0,0,0,0,0,0);
-//            mBodyFatManager.synUser();
-            mBodyFatManager.setCurrentUser(3,1,20,170);
-        }
 
         @Override
         public boolean shouldEnableBatteryLevelNotifications(BluetoothDevice device) {
@@ -185,12 +222,12 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
 
         @Override
         public void onError(BluetoothDevice device, String message, int errorCode) {
-            Log.e(TAG,device.getAddress()+ errorCode +message);
+            Log.e(TAG, device.getAddress() + errorCode + message);
         }
 
         @Override
         public void onDeviceNotSupported(BluetoothDevice device) {
-            Log.e(TAG,device.getAddress()+ " device does not contain service demanded");
+            Log.e(TAG, device.getAddress() + " device does not contain service demanded");
         }
     };
 
@@ -205,7 +242,7 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
                     dataBean.setDeviceID(scanDevice.getMac());
                     dataBean.setAdvData(Utils.byteArray2String(scanDevice.getScanRawData()));
 
-                    if(scanDevice.getName().equals("ICX-ABF")) {
+                    if (scanDevice.getName().equals("ICX-ABF")) {
                         mBodyFatManager.connect(BluetoothAdapter.getDefaultAdapter()
                                 .getRemoteDevice(scanDevice.getMac()));
                         findViewById(R.id.serviceStop).callOnClick();
@@ -283,7 +320,7 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
          * @param scanResult
          */
         public void addDataByScanResult(BleScanDevice scanResult) {
-            Log.e("rssi", scanResult.getRssi() + "["+scanResult.getName()+"]" + scanResult.getMac());
+            Log.e("rssi", scanResult.getRssi() + "[" + scanResult.getName() + "]" + scanResult.getMac());
             BleDevice bleDevice = new BleDevice()
                     .addRssi(scanResult.getRssi())
                     .addMac(scanResult.getMac())
