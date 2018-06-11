@@ -1,5 +1,6 @@
 package com.demo.icarbox.blereceiver;
 
+import android.accounts.Account;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
@@ -99,6 +100,7 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
 
         LocalBroadcastManager.getInstance(getApplicationContext())
                 .registerReceiver(broadcastReceiver, intentFilter);
+
     }
 
     @Override
