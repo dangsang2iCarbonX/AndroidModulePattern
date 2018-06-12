@@ -2,14 +2,11 @@ package com.icarbonx.smartdevice.account;
 
 import com.google.gson.Gson;
 
-import org.joda.time.DateTime;
-import org.joda.time.LocalDate;
-
 /**
  * Base response class for user account controller
  * @author lavi
  */
-public class BaseResp<T> implements JsonInterface{
+public class BaseResponse<T> implements JsonInterface{
     T data;
 
     //error message
@@ -31,7 +28,7 @@ public class BaseResp<T> implements JsonInterface{
         return data;
     }
 
-    public BaseResp<T> setData(T data) {
+    public BaseResponse<T> setData(T data) {
         this.data = data;
         return this;
     }

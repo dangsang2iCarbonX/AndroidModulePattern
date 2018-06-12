@@ -17,7 +17,7 @@ android {
         }
         javaCompileOptions {
             annotationProcessorOptions {
-                arguments = [ moduleName : project.getName() ]
+                arguments = [moduleName: project.getName()]
             }
         }
     }
@@ -26,8 +26,8 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
-    sourceSets{
-        main{
+    sourceSets {
+        main {
             if (isModule.toBoolean()) {
                 manifest.srcFile 'src/main/module/AndroidManifest.xml'
             } else {
@@ -51,16 +51,15 @@ android {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+//    implementation 'com.android.support.constraint:constraint-layout:1.1.1'
     annotationProcessor deps.arouter_compiler
     implementation project(':lib_common')
     // Log Bluetooth LE events in nRF Logger
-    implementation 'no.nordicsemi.android:log:2.1.1'
+//    implementation 'no.nordicsemi.android:log:2.1.1'
     // BLE library
     //    implementation 'no.nordicsemi.android:ble:1.1.0'
     implementation project(':ble')
-    implementation 'joda-time:joda-time:2.3'
+//    implementation 'joda-time:joda-time:2.3'
 
     testImplementation 'junit:junit:4.12'
-//    androidTestImplementation 'com.android.support.test:runner:1.0.2'
-//    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 }

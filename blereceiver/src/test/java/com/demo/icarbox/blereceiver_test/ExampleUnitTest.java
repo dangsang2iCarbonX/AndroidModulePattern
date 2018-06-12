@@ -1,15 +1,25 @@
 package com.demo.icarbox.blereceiver_test;
 
 import com.google.gson.Gson;
-import com.icarbonx.smartdevice.account.LoginResp;
+import com.icarbonx.smartdevice.account.Apis;
+import com.icarbonx.smartdevice.account.BaseResponse;
+import com.icarbonx.smartdevice.account.FamilyAccount;
 import com.icarbonx.smartdevice.account.UserAccountHttpService;
+import com.icarbonx.smartdevice.http.AbstractObserver;
 
 import org.junit.Test;
+import org.reactivestreams.Subscription;
 
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
+import io.reactivex.Flowable;
+import io.reactivex.ObservableSource;
+import io.reactivex.Observer;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
 import retrofit2.Retrofit;
+import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
@@ -19,10 +29,10 @@ import retrofit2.converter.gson.GsonConverterFactory;
  */
 public class ExampleUnitTest {
     @Test
-    public void addition_isCorrect() {
+    public void addition_isCorrect() throws InterruptedException {
         System.out.println("233214q34");
 
-        System.out.println(new Gson().toJson(new LoginResp.FamilyAccount().setAddress("sad")));
+        System.out.println(new Gson().toJson(new FamilyAccount().setAddress("sad")));
         String str = "{\n" +
                 "    \"personId\": 1017575,\n" +
                 "    \"fatherId\": -34661,\n" +
@@ -52,51 +62,93 @@ public class ExampleUnitTest {
                 "    \"relation\": 1,\n" +
                 "    \"phoneNumber\": null\n" +
                 "  }";
-        LoginResp.FamilyAccount familyAccount = new Gson().fromJson(str, LoginResp.FamilyAccount.class);
+        FamilyAccount familyAccount = new Gson().fromJson(str, FamilyAccount.class);
 
-        System.out.println(familyAccount.toString());
+//        System.out.println(familyAccount.toString());
 
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("https://mainapi.icarbonx.com/")
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-
-        UserAccountHttpService accountHttpInterface = retrofit.create(UserAccountHttpService.class);
-
+//        Retrofit retrofit = new Retrofit.Builder()
+//                .baseUrl()
+//                .addConverterFactory(GsonConverterFactory.create())
+//                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+//                .build();
+//
+//        UserAccountHttpService accountHttpInterface = retrofit.create(UserAccountHttpService.class);
 
 //        accountHttpInterface.getVerifyCode("17607617511",1).enqueue(
-//                new Callback<BaseResp>() {
+//                new Callback<BaseResponse>() {
 //                    @Override
-//                    public void onResponse(Call<BaseResp> call, Response<BaseResp> response) {
+//                    public void onResponse(Call<BaseResponse> call, Response<BaseResponse> response) {
 //                        System.out.println("2"+response.body().toString()+response.body().getErrorCode());
 //                    }
 //
 //                    @Override
-//                    public void onFailure(Call<BaseResp> call, Throwable t) {
+//                    public void onFailure(Call<BaseResponse> call, Throwable t) {
 //
 //                    }
 //                }
 //        );
-        System.out.println(new LoginResp().setData(new LoginResp.FamilyAccount()));
+//        System.out.println(new LoginResponse().setData(new FamilyAccount()));
 
-        Object object = String.class;
-        accountHttpInterface.login("17607617511","5790").enqueue(
-                new Callback<LoginResp>() {
+//        accountHttpInterface.login("17607617511","3003").enqueue(
+//                new Callback<LoginResponse>() {
+//                    @Override
+//                    public void onResponse(Call<LoginResponse> call, Response<LoginResponse> response) {
+//                        System.out.println(""+response.body());
+//                    }
+//
+//                    @Override
+//                    public void onFailure(Call<LoginResponse> call, Throwable t) {
+//                        System.out.println(""+t.getMessage());
+//                    }
+//                }
+//        );
+
+//        accountHttpInterface.updateUserPhoto("2");
+
+        String[] names = {"123", "3213"};
+
+        Apis.getInstance().getUserAccountService()
+                .verifyPhoneNumber("17607617511")
+                .subscribeOn(Schedulers.io())
+//                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new AbstractObserver<BaseResponse>() {
                     @Override
-                    public void onResponse(Call<LoginResp> call, Response<LoginResp> response) {
-                        System.out.println(""+response.body());
+                    public void onSuccess(BaseResponse baseResponse) {
+                        System.out.println(baseResponse.toJson());
+                        if(baseResponse.getErrorCode()!=0){
+                            System.out.println(baseResponse.getErrMsg());
+                        }
                     }
 
                     @Override
-                    public void onFailure(Call<LoginResp> call, Throwable t) {
-                        System.out.println(""+t.getMessage());
+                    public void onFailure(Throwable throwable) {
+
                     }
-                }
-        );
+                });
 
 
-       // assertEquals(4, 2 + 2);
-        while(true);
+
+
+//                    @Override public void onNext(MovieSubject movieSubject)
+// { mMovieAdapter.setMovies(movieSubject.subjects);
+// mMovieAdapter.notifyDataSetChanged(); } });
+
+
+//        Observable.fromArray(names)
+//                .subscribe(nw Action<String>())
+
+
+        Flowable.just("Hello world")
+                .subscribe(new Consumer<String>() {
+                    @Override
+                    public void accept(String s) {
+                        System.out.println(s);
+                    }
+                });
+
+
+        // assertEquals(4, 2 + 2);
+        while (true) ;
     }
 
 

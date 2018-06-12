@@ -27,6 +27,7 @@ import com.icarbonx.smartdevice.bodyfat.BodyFatData;
 import com.icarbonx.smartdevice.bodyfat.BodyFatDataHelper;
 import com.icarbonx.smartdevice.bodyfat.BodyFatUser;
 import com.icarbonx.smartdevice.http.BleHttpManager;
+import com.jakewharton.rxbinding2.view.RxView;
 import com.jude.easyrecyclerview.EasyRecyclerView;
 import com.jude.easyrecyclerview.adapter.BaseViewHolder;
 import com.jude.easyrecyclerview.adapter.RecyclerArrayAdapter;
@@ -35,12 +36,18 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
+import io.reactivex.Observer;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.plugins.RxJavaPlugins;
 import no.nordicsemi.android.ble.Request;
 import no.nordicsemi.android.log.LocalLogSession;
 import no.nordicsemi.android.log.LogSession;
 import no.nordicsemi.android.log.Logger;
 import no.nordicsemi.android.support.v18.scanner.ScanFilter;
+import retrofit2.Retrofit;
 
 @Route(path = "/ble/receiver")
 public class BleReceiverActivity extends BaseActionBarActivity implements SwipeRefreshLayout.OnRefreshListener, View.OnClickListener {
@@ -89,6 +96,31 @@ public class BleReceiverActivity extends BaseActionBarActivity implements SwipeR
 //        LayoutInflater.Factory
 //        ThreadPoolExecutor
         bodyFatDataHelper.setmIDataParser(bodyFatParser);
+
+        RxView.clicks(findViewById(R.id.serviceStart))
+                .throttleFirst(1, TimeUnit.SECONDS)
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Observer() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+
+                    }
+
+                    @Override
+                    public void onNext(Object o) {
+                        Log.e(TAG,o.getClass().getSimpleName()+"收到点击事件");
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+
+                    }
+
+                    @Override
+                    public void onComplete() {
+
+                    }
+                });
     }
 
     @Override

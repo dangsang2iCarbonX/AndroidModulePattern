@@ -3,5 +3,19 @@
     <string name="str_ble_receiver_title">蓝牙数据收集</string>
     <string name="str_demo_ble_scan_manager_title">BleScanManager Demo</string>
     <string name="str_demo_ble_http_manager_title">BleHttpManager Demo</string>
+    <string name="title_activity_login">Sign in</string>
+
+    <!-- Strings related to login -->
+    <string name="prompt_email">Phone number</string>
+    <string name="prompt_password">Verify code(required)</string>
+    <string name="action_sign_in">Sign in or register</string>
+    <string name="action_sign_in_short">Sign in</string>
+    <string name="error_invalid_email">This  phone number is invalid</string>
+    <string name="error_invalid_password">This verify code is not 4 numbers</string>
+    <string name="error_incorrect_password">This verify code is incorrect</string>
+    <string name="error_field_required">This field is required</string>
+    <string name="permission_rationale">"Contacts permissions are needed for providing phone number
+        completions."
+    </string>
 
 </resources>
