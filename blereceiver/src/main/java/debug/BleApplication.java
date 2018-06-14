@@ -21,22 +21,22 @@ public class BleApplication extends BaseApplication {
                 .baseUrl("http://gank.io/api/data/")
                 .url("福利/10/1")
                 .build();
-        client.get(new OnResultListener<String>() {
-
-            @Override
-            public void onSuccess(String result) {
-                Logger.e(result);
-            }
-
-            @Override
-            public void onError(int code, String message) {
-                Logger.e(message);
-            }
-
-            @Override
-            public void onFailure(String message) {
-                Logger.e(message);
-            }
-        });
+//        client.get(new OnResultListener<String>() {
+//
+//            @Override
+//            public void onSuccess(String result) {
+//                Logger.e(result);
+//            }
+//
+//            @Override
+//            public void onError(int code, String message) {
+//                Logger.e(message);
+//            }
+//
+//            @Override
+//            public void onFailure(String message) {
+//                Logger.e(message);
+//            }
+//        });
     }
 }

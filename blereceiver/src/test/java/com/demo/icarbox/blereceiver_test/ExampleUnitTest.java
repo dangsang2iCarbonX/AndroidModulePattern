@@ -1,26 +1,20 @@
 package com.demo.icarbox.blereceiver_test;
 
 import com.google.gson.Gson;
+import com.icarbonx.smartdevice.UrlConstants;
 import com.icarbonx.smartdevice.account.Apis;
+import com.icarbonx.smartdevice.account.ApisOld;
 import com.icarbonx.smartdevice.account.BaseResponse;
 import com.icarbonx.smartdevice.account.FamilyAccount;
 import com.icarbonx.smartdevice.account.UserAccountHttpService;
 import com.icarbonx.smartdevice.http.AbstractObserver;
 
 import org.junit.Test;
-import org.reactivestreams.Subscription;
 
 import io.reactivex.Flowable;
-import io.reactivex.ObservableSource;
-import io.reactivex.Observer;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.disposables.Disposable;
+import io.reactivex.Scheduler;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
-import retrofit2.Retrofit;
-import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
-import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
  * Example local unit test, which will execute on the development machine (host).
@@ -107,26 +101,36 @@ public class ExampleUnitTest {
 
         String[] names = {"123", "3213"};
 
-        Apis.getInstance().getUserAccountService()
-                .verifyPhoneNumber("17607617511")
-                .subscribeOn(Schedulers.io())
-//                .observeOn(AndroidSchedulers.mainThread())
+//        ApisOld.getInstance().getUserAccountService()
+//                .getVerifyCode("18923889519",1)
+//                .subscribeOn(Schedulers.io())
+////                .observeOn(AndroidSchedulers.mainThread())
+//                .subscribe(new AbstractObserver<BaseResponse>() {
+//                    @Override
+//                    public void onSuccess(BaseResponse baseResponse) {
+//                        System.out.println(baseResponse.toJson());
+//                        if(baseResponse.getErrorCode()!=0){
+//                            System.out.println(baseResponse.getErrMsg());
+//                        }
+//                    }
+//
+//                    @Override
+//                    public void onFailure(Throwable throwable) {
+//
+//                    }
+//                });
+        Apis<UserAccountHttpService> apis = new Apis<UserAccountHttpService>()
+                .setService(UserAccountHttpService.class, UrlConstants.MEUM_URL);
+
+        apis.getService()
+                .verifyPhoneNumber("18923889519")
+                .subscribeOn(Schedulers.single())
                 .subscribe(new AbstractObserver<BaseResponse>() {
                     @Override
                     public void onSuccess(BaseResponse baseResponse) {
                         System.out.println(baseResponse.toJson());
-                        if(baseResponse.getErrorCode()!=0){
-                            System.out.println(baseResponse.getErrMsg());
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Throwable throwable) {
-
                     }
                 });
-
-
 
 
 //                    @Override public void onNext(MovieSubject movieSubject)

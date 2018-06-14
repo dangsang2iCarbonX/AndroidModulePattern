@@ -1,71 +1,95 @@
 package com.icarbonx.smartdevice.account;
 
-import android.util.Log;
+import android.util.ArrayMap;
 
-import com.google.gson.GsonBuilder;
-import com.icarbonx.smartdevice.UrlConstants;
-
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
-import okhttp3.Response;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
- * All api services
- *
- * @author lavi
+ * Apis manager class
  */
-public class Apis {
-    private UserAccountHttpService userAccountHttpService;
-    private static final Apis ourInstance = new Apis();
+public class Apis<T> {
+    //Api interface service
+    private T mService;
+    //Api interface class
+    private Class<T> mServiceClass;
+    //Base Url for retrofit
+    private String mBaseUrl;
 
-    public static Apis getInstance() {
-        return ourInstance;
-    }
-
-    private Apis() {
+    public Apis() {
     }
 
     /**
-     * Get user account api service
+     * Setup the service class and base url.
      *
-     * @return {@link UserAccountHttpService}
+     * @param serviceClass service class
+     * @param baseUrl      base url
      */
-    public UserAccountHttpService getUserAccountService() {
-        if (userAccountHttpService == null) {
-            synchronized (this) {
-                if (userAccountHttpService == null) {
-                    Retrofit retrofit = new Retrofit.Builder()
-                            .baseUrl(UrlConstants.BASE_URL)
-                            .client(httpClient)
-                            // 添加Retrofit到RxJava的转换器
-                            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-                            // 添加Gson转换器
-                            .addConverterFactory(GsonConverterFactory.create())
-                            .build();
+    public Apis setService(Class<T> serviceClass, String baseUrl) {
+        this.mServiceClass = serviceClass;
+        this.mBaseUrl = baseUrl;
+        if (serviceClass == null) {
+            throw new NullPointerException("service class should not be null");
+        }
+        if (baseUrl == null || baseUrl.length() < 1) {
+            throw new IllegalArgumentException("Invalid Url");
+        }
+        return this;
+    }
 
-                    userAccountHttpService = retrofit.create(UserAccountHttpService.class);
-                }
+    /**
+     * Get the api service
+     *
+     * @return {@link T}
+     */
+    public T getService() {
+        if (mService == null) synchronized (this) {
+            if (mService == null) {
+                Retrofit retrofit = new Retrofit.Builder()
+                        .baseUrl(mBaseUrl)
+                        .client(mHttpClient)
+                        // 添加Retrofit到RxJava的转换器
+                        .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+                        // 添加Gson转换器
+                        .addConverterFactory(GsonConverterFactory.create())
+                        .build();
+                mService = retrofit.create((Class<T>) mServiceClass);
             }
         }
-        return userAccountHttpService;
+        return mService;
     }
 
 
     //访问超时
-    private static final long TIMEOUT = 30;
-
+    protected long TIMEOUT = 30;
     // Retrofit是基于OkHttpClient的，可以创建一个OkHttpClient进行一些配置
-    private static OkHttpClient httpClient = new OkHttpClient.Builder()
+    protected OkHttpClient mHttpClient = new OkHttpClient.Builder()
             //打印接口信息，方便接口调试
             .addInterceptor(new LoggingInterceptor())
             .addNetworkInterceptor(new HttpingInterceptor())
             .connectTimeout(TIMEOUT, TimeUnit.SECONDS)
             .readTimeout(TIMEOUT, TimeUnit.SECONDS)
             .build();
+
+    /**
+     * Override the default {@link OkHttpClient} configure.
+     *
+     * @param httpClient {@link OkHttpClient}
+     */
+    protected void setHttpClient(OkHttpClient httpClient) {
+        httpClient = httpClient;
+    }
+
+    /**
+     * Set the timeout of connection and read timeout.
+     *
+     * @param TIMEOUT time in mills.
+     */
+    protected static void setTIMEOUT(long TIMEOUT) {
+        TIMEOUT = TIMEOUT;
+    }
 }

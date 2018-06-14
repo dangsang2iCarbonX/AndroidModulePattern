@@ -46,12 +46,12 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-
 }
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
 //    implementation 'com.android.support.constraint:constraint-layout:1.1.1'
+    implementation 'com.android.support.constraint:constraint-layout:1.1.1'
     annotationProcessor deps.arouter_compiler
     implementation project(':lib_common')
     // Log Bluetooth LE events in nRF Logger

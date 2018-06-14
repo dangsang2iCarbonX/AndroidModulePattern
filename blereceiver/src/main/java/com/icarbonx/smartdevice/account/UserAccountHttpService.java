@@ -13,7 +13,7 @@ import retrofit2.http.Query;
  * Interface created depends on {@link retrofit2.Retrofit}.
  * @author lavi
  */
-public interface UserAccountHttpService {
+public interface UserAccountHttpService{
     //获取验证码
     @FormUrlEncoded
     @POST("verifyCodeController/send.do")
